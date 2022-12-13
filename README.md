@@ -11,6 +11,7 @@ This project is for educational purpose to study object document mapper in pytho
 
 ```bash
 pip install -r requiements.txt
+flask --app server --debug run
 ```
 
 
