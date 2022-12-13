@@ -1,5 +1,5 @@
 from flask import Flask
-from Route import Route
+from Route import ModularRoute,SchemaRoute
 from schemas import user_schema
 from odm.object_document_mapper import ObjectDocumentMapper
 
@@ -9,5 +9,8 @@ odm = ObjectDocumentMapper(
     )
 app = Flask(__name__)
 
-user_router = Route(user_schema,odm)
+schema_router = SchemaRoute(odm)
+schema_router.inject_app(app)
+
+user_router = ModularRoute(user_schema,odm)
 user_router.inject_app(app)
