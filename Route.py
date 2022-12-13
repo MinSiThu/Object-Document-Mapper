@@ -9,16 +9,21 @@ class AbstractRoute:
             __name__,
             url_prefix=f"/api/{self.document_name}"
         )
+        self.middlewares = {}
 
     def inject_app(self,app):
+        self.injected_app = app
+
         @self.blueprint.route("/ping")
         def hello_world():
             return f"<p>Hello {self.document_name}!</p>"
 
         @self.blueprint.route(f"/create",methods=["POST"])
         def create():
-            objectId = self.odm.create(self.document_name,request.form.to_dict())
-            return request.form
+            print(request.json)
+            objectId = self.odm.create(self.document_name,request.json)
+            
+            return self.odm.parse_json(request.json)
 
         @self.blueprint.route("/read")
         def read():
@@ -73,3 +78,4 @@ class SchemaRoute(AbstractRoute):
 
     def addModularRoute(self,schema):
         modular_route = ModularRoute(schema,self.odm)
+        modular_route.inject_app(self.injected_app)

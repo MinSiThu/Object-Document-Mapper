@@ -11,6 +11,3 @@ app = Flask(__name__)
 
 schema_router = SchemaRoute(odm)
 schema_router.inject_app(app)
-
-user_router = ModularRoute(user_schema,odm)
-user_router.inject_app(app)
