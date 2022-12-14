@@ -22,8 +22,7 @@ class AbstractRoute:
         def create():
             print(request.json)
             objectId = self.odm.create(self.document_name,request.json)
-            
-            return self.odm.parse_json(request.json)
+            return request.json
 
         @self.blueprint.route("/read")
         def read():
@@ -39,37 +38,44 @@ class AbstractRoute:
         app.register_blueprint(self.blueprint)    
 
 class ModularRoute:
-    def __init__(self,schema,odm):
-        self.schema = schema
+    def __init__(self,odm):
         self.odm = odm
-        self.document_name = schema["model_name_plural"]
         self.blueprint = Blueprint(
-            self.document_name,
+            "modular",
             __name__,
-            url_prefix=f"/api/{self.document_name}"
-            )
+            url_prefix=f"/modular"
+        )
     
     def inject_app(self,app):
-        @self.blueprint.route("/ping")
+        @self.blueprint.route(f"/api/ping")
         def hello_world():
-            return f"<p>Hello {self.document_name}!</p>"
+            return f"<h3>Hello Modular!</h3>"
 
-        @self.blueprint.route(f"/create",methods=["POST"])
-        def create():
-            objectId = self.odm.create(self.document_name,request.form.to_dict())
+        @self.blueprint.route(f"/api/create/<document_name>",methods=["POST"])
+        def create(document_name):
+            objectId = self.odm.create(document_name,request.form.to_dict())
             return request.form
 
-        @self.blueprint.route("/read")
-        def read():
-            results = self.odm.getByQuery(self.document_name,{})
+        @self.blueprint.route(f"/api/read/<document_name>")
+        def read(document_name):
+            results = self.odm.getByQuery(document_name,{})
             return self.odm.parse_json(results)
 
-        @self.blueprint.route("/update",methods=["PUT"])
-        def update():
-            self.odm.updateOne(self.document_name,request.json['filter'],request.json["update_data"])
-            return True
+        @self.blueprint.route(f"/api/update/<document_name>",methods=["PUT"])
+        def update(document_name):
+            try:
+                self.odm.updateOne(document_name,request.json['filter'],request.json["update_data"])
+                return {"message":[
+                    "update succeed"
+                ]}
+            except:
+                return {"message":[
+                        "update fails"
+                    ]}
 
+        # Register the blueprint in injected Flask app
         app.register_blueprint(self.blueprint)
+
         
 class SchemaRoute(AbstractRoute):
     def __init__(self,odm):
