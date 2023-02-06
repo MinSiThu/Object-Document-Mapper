@@ -1,5 +1,8 @@
 from flask import Blueprint,request,jsonify
 
+"""
+Abstract Route is about managing schema for document entries
+"""
 class AbstractRoute:
     def __init__(self,document_name,odm):
         self.document_name = document_name
@@ -18,25 +21,38 @@ class AbstractRoute:
         def hello_world():
             return f"<p>Hello {self.document_name}!</p>"
 
+        @self.blueprint.route("/list")
+        def get_list():
+            return self.odm.list_schema()
+
         @self.blueprint.route(f"/create",methods=["POST"])
         def create():
-            print(request.json)
-            objectId = self.odm.create(self.document_name,request.json)
-            return request.json
+            objectId = self.odm.create_schema(request.json)
+            return self.odm.parse_json(request.json)
 
         @self.blueprint.route("/read")
         def read():
-            results = self.odm.getByQuery(self.document_name,{})
+            results = self.odm.getAll(self.document_name)
             return self.odm.parse_json(results)
 
         @self.blueprint.route("/update",methods=["PUT"])
         def update():
-            self.odm.updateOne(self.document_name,request.json['filter'],request.json["update_data"])
-            return True
+            try:
+                self.odm.updateOne(self.document_name,request.json['filter'],request.json["update_data"])
+                return {"message":[
+                    "update succeed"
+                ]}
+            except Exception as e:
+                return {"message":[
+                    "update fail"
+                ]}
 
         # Register the blueprint in injected Flask app
         app.register_blueprint(self.blueprint)    
 
+"""
+Modular Route mainly for handling entries related to schema
+"""
 class ModularRoute:
     def __init__(self,odm):
         self.odm = odm
@@ -50,6 +66,11 @@ class ModularRoute:
         @self.blueprint.route(f"/api/ping")
         def hello_world():
             return f"<h3>Hello Modular!</h3>"
+        
+        @self.blueprint.route(f"/api/count/<document_name>",methods=["GET"])
+        def count(document_name):
+            count = self.odm.count_entries(document_name)
+            return {"count":count,"schema":document_name}
 
         @self.blueprint.route(f"/api/create/<document_name>",methods=["POST"])
         def create(document_name):
@@ -61,16 +82,31 @@ class ModularRoute:
             results = self.odm.getByQuery(document_name,{})
             return self.odm.parse_json(results)
 
-        @self.blueprint.route(f"/api/update/<document_name>",methods=["PUT"])
-        def update(document_name):
+        @self.blueprint.route(f"/api/update_one/<document_name>",methods=["PUT"])
+        def updateOne(document_name):
             try:
                 self.odm.updateOne(document_name,request.json['filter'],request.json["update_data"])
                 return {"message":[
                     "update succeed"
                 ]}
-            except:
+            except Exception as e:
+                print(e)
                 return {"message":[
                         "update fails"
+                    ]}
+
+        @self.blueprint.route(f"/api/delete_one/<document_name>",methods=['POST'])
+        def deleteOne(document_name):
+            try:
+                self.odm.deleteOne(document_name,request.json['filter'])
+                print("Not here")
+                return {"message":[
+                    "delete succeed"
+                ]}
+            except Exception as e:
+                print(e)
+                return {"message":[
+                        "delete fails"
                     ]}
 
         # Register the blueprint in injected Flask app
@@ -80,7 +116,7 @@ class ModularRoute:
 class SchemaRoute(AbstractRoute):
     def __init__(self,odm):
         self.modular_routers = {}
-        AbstractRoute.__init__(self,"schema",odm)
+        AbstractRoute.__init__(self,"schema_collection",odm)
 
     def addModularRoute(self,schema):
         modular_route = ModularRoute(schema,self.odm)
